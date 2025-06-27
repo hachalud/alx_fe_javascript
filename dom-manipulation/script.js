@@ -319,6 +319,18 @@ async function fetchQuotesFromServer() {
   }));
 }
 
+async function postQuoteToServer(quote) {
+  const response = await fetch("https://jsonplaceholder.typicode.com/posts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(quote),
+  });
+  const result = await response.json();
+  return result;
+}
+
 function getLocalQuotes() {
   return JSON.parse(localStorage.getItem("quotes")) || [];
 }
@@ -378,6 +390,24 @@ function displayQuotes(quotes) {
   });
 }
 
+async function addNewQuote() {
+  const text = prompt("Enter new quote text:");
+  if (!text) return;
+
+  const newQuote = {
+    text: text,
+    category: "User",
+  };
+
+  const posted = await postQuoteToServer(newQuote);
+  const localQuotes = getLocalQuotes();
+  posted.category = "User";
+  localQuotes.push(posted);
+  saveToLocalQuotes(localQuotes);
+  displayQuotes(localQuotes);
+  notifyUser("New quote added and synced to server.");
+}
+
 function setupSyncSystem() {
   const initialQuotes = getLocalQuotes();
   displayQuotes(initialQuotes);
@@ -388,6 +418,12 @@ function setupSyncSystem() {
   if (syncBtn) {
     syncBtn.addEventListener("click", syncQuotes);
   }
+
+  const addBtn = document.getElementById("addQuote");
+  if (addBtn) {
+    addBtn.addEventListener("click", addNewQuote);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", setupSyncSystem);
+
