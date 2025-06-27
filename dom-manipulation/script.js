@@ -375,7 +375,7 @@ async function syncQuotes() {
   if (updated) {
     saveToLocalQuotes(mergedQuotes);
     displayQuotes(mergedQuotes);
-    notifyUser("Quotes synced and conflicts resolved.");
+    notifyUser("Quotes synced with server!");
   }
 }
 
@@ -405,7 +405,7 @@ async function addNewQuote() {
   localQuotes.push(posted);
   saveToLocalQuotes(localQuotes);
   displayQuotes(localQuotes);
-  notifyUser("New quote added and synced to server.");
+  notifyUser("New quote added and sent to server.");
 }
 
 function setupSyncSystem() {
@@ -426,4 +426,5 @@ function setupSyncSystem() {
 }
 
 document.addEventListener("DOMContentLoaded", setupSyncSystem);
+
 
