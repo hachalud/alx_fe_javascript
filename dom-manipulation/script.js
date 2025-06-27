@@ -305,3 +305,45 @@ window.onload = function () {
 newQuoteBtn.addEventListener("click", showRandomQuote);
 categoryFilter.addEventListener("change", filterQuotes);
 createAddQuoteForm();
+
+
+async function syncWithServer() {
+  try {
+    const serverQuotes = await fetchServerQuotes();
+
+    const serverTexts = new Set(serverQuotes.map((q) => q.text));
+    const localTexts = new Set(quotes.map((q) => q.text));
+
+    const newQuotes = serverQuotes.filter((q) => !localTexts.has(q.text));
+
+    if (newQuotes.length > 0) {
+      quotes.push(...newQuotes);
+      saveQuotes();
+      showSyncNotification(newQuotes.length);
+    }
+  } catch (error) {
+    console.error("Failed to sync with server:", error);
+  }
+}
+
+function showSyncNotification(count) {
+  const note = document.createElement("div");
+  note.textContent = `${count} new quote(s) synced from server.`;
+  note.style.cssText = `
+    background: #def;
+    color: #000;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #00f;
+    font-weight: bold;
+  `;
+  document.body.prepend(note);
+  setTimeout(() => note.remove(), 5000);
+}
+
+setInterval(syncWithServer, 30000);
+
+window.onload = function () {
+  showRandomQuote();
+  syncWithServer();
+};
