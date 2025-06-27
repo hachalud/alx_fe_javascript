@@ -307,43 +307,87 @@ categoryFilter.addEventListener("change", filterQuotes);
 createAddQuoteForm();
 
 
-async function syncWithServer() {
-  try {
-    const serverQuotes = await fetchServerQuotes();
+async function fetchQuotesFromServer() {
+  const response = await fetch(
+    "https://jsonplaceholder.typicode.com/posts?_limit=5"
+  );
+  const data = await response.json();
+  return data.map((item) => ({
+    id: item.id,
+    text: item.title,
+    category: "Server",
+  }));
+}
 
-    const serverTexts = new Set(serverQuotes.map((q) => q.text));
-    const localTexts = new Set(quotes.map((q) => q.text));
+function getLocalQuotes() {
+  return JSON.parse(localStorage.getItem("quotes")) || [];
+}
 
-    const newQuotes = serverQuotes.filter((q) => !localTexts.has(q.text));
+function saveToLocalQuotes(quotes) {
+  localStorage.setItem("quotes", JSON.stringify(quotes));
+}
 
-    if (newQuotes.length > 0) {
-      quotes.push(...newQuotes);
-      saveQuotes();
-      showSyncNotification(newQuotes.length);
+function notifyUser(message) {
+  const notification = document.createElement("div");
+  notification.innerText = message;
+  notification.style =
+    "background:#e0f7fa; border:1px solid #00acc1; padding:10px; margin:10px; color:#006064;";
+  document.body.prepend(notification);
+  setTimeout(() => notification.remove(), 5000);
+}
+
+async function syncQuotes() {
+  const serverQuotes = await fetchQuotesFromServer();
+  const localQuotes = getLocalQuotes();
+  let updated = false;
+  const mergedQuotes = [...localQuotes];
+
+  serverQuotes.forEach((serverQuote) => {
+    const localIndex = mergedQuotes.findIndex((q) => q.id === serverQuote.id);
+    const localQuote = mergedQuotes[localIndex];
+
+    if (!localQuote) {
+      mergedQuotes.push(serverQuote);
+      updated = true;
+    } else if (localQuote.text !== serverQuote.text) {
+      const userChoice = confirm(
+        `Conflict for quote ID ${serverQuote.id}:\n\nLocal: "${localQuote.text}"\nServer: "${serverQuote.text}"\n\nClick OK to accept server version, Cancel to keep local.`
+      );
+      if (userChoice) {
+        mergedQuotes[localIndex] = serverQuote;
+        updated = true;
+      }
     }
-  } catch (error) {
-    console.error("Failed to sync with server:", error);
+  });
+
+  if (updated) {
+    saveToLocalQuotes(mergedQuotes);
+    displayQuotes(mergedQuotes);
+    notifyUser("Quotes synced and conflicts resolved.");
   }
 }
 
-function showSyncNotification(count) {
-  const note = document.createElement("div");
-  note.textContent = `${count} new quote(s) synced from server.`;
-  note.style.cssText = `
-    background: #def;
-    color: #000;
-    padding: 10px;
-    margin: 10px;
-    border: 1px solid #00f;
-    font-weight: bold;
-  `;
-  document.body.prepend(note);
-  setTimeout(() => note.remove(), 5000);
+function displayQuotes(quotes) {
+  const container = document.getElementById("quoteDisplay");
+  container.innerHTML = "";
+  quotes.forEach((q) => {
+    const div = document.createElement("div");
+    div.innerText = `"${q.text}" — ${q.category}`;
+    div.style.margin = "8px 0";
+    container.appendChild(div);
+  });
 }
 
-setInterval(syncWithServer, 30000);
+function setupSyncSystem() {
+  const initialQuotes = getLocalQuotes();
+  displayQuotes(initialQuotes);
+  syncQuotes();
+  setInterval(syncQuotes, 30000);
 
-window.onload = function () {
-  showRandomQuote();
-  syncWithServer();
-};
+  const syncBtn = document.getElementById("syncNow");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", syncQuotes);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", setupSyncSystem);
