@@ -180,3 +180,128 @@ function importFromJsonFile(event) {
 
 newQuoteBtn.addEventListener("click", showRandomQuote);
 createAddQuoteForm();
+const categoryFilter = document.getElementById("categoryFilter");
+
+function saveQuotes() {
+  localStorage.setItem("quotes", JSON.stringify(quotes));
+}
+
+function showRandomQuote() {
+  const randomIndex = Math.floor(Math.random() * quotes.length);
+  const quote = quotes[randomIndex];
+  quoteDisplay.innerHTML = `
+    <p><strong>Quote:</strong> ${quote.text}</p>
+    <p><strong>Category:</strong> ${quote.category}</p>
+  `;
+  sessionStorage.setItem("lastViewedQuote", JSON.stringify(quote));
+}
+
+function populateCategories() {
+  const selected = localStorage.getItem("selectedCategory") || "all";
+  categoryFilter.innerHTML = `<option value="all">All</option>`;
+  const categories = [...new Set(quotes.map((q) => q.category))];
+  categories.forEach((cat) => {
+    const option = document.createElement("option");
+    option.value = cat;
+    option.textContent = cat;
+    if (cat === selected) option.selected = true;
+    categoryFilter.appendChild(option);
+  });
+}
+
+function filterQuotes() {
+  const selectedCategory = categoryFilter.value;
+  localStorage.setItem("selectedCategory", selectedCategory);
+  const filtered =
+    selectedCategory === "all"
+      ? quotes
+      : quotes.filter((q) => q.category === selectedCategory);
+  if (filtered.length === 0) {
+    quoteDisplay.innerHTML = `<p>No quotes in this category.</p>`;
+  } else {
+    quoteDisplay.innerHTML = filtered
+      .map(
+        (q) =>
+          `<p><strong>Quote:</strong> ${q.text}<br><strong>Category:</strong> ${q.category}</p>`
+      )
+      .join("<hr>");
+  }
+}
+
+function createAddQuoteForm() {
+  if (document.getElementById("quoteForm")) return;
+  const form = document.createElement("form");
+  form.id = "quoteForm";
+  form.innerHTML = `
+    <h3>Add a New Quote</h3>
+    <label>Quote Text:<br>
+      <textarea id="quoteText" rows="3" cols="40" required></textarea>
+    </label><br><br>
+    <label>Category:<br>
+      <input type="text" id="quoteCategory" required>
+    </label><br><br>
+    <button type="submit">Add Quote</button>
+  `;
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const text = document.getElementById("quoteText").value.trim();
+    const category = document.getElementById("quoteCategory").value.trim();
+    if (text && category) {
+      quotes.push({ text, category });
+      saveQuotes();
+      form.reset();
+      alert("Quote added successfully!");
+      populateCategories();
+      filterQuotes();
+    } else {
+      alert("Please fill in both fields.");
+    }
+  });
+  document.body.appendChild(form);
+}
+
+function exportToJsonFile() {
+  const dataStr = JSON.stringify(quotes, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const downloadLink = document.createElement("a");
+  downloadLink.href = url;
+  downloadLink.download = "quotes.json";
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+  URL.revokeObjectURL(url);
+}
+
+function importFromJsonFile(event) {
+  const fileReader = new FileReader();
+  fileReader.onload = function (e) {
+    try {
+      const importedQuotes = JSON.parse(e.target.result);
+      if (
+        Array.isArray(importedQuotes) &&
+        importedQuotes.every((q) => q.text && q.category)
+      ) {
+        quotes.push(...importedQuotes);
+        saveQuotes();
+        populateCategories();
+        filterQuotes();
+        alert("Quotes imported successfully!");
+      } else {
+        alert("Invalid file format.");
+      }
+    } catch (err) {
+      alert("Error reading JSON file.");
+    }
+  };
+  fileReader.readAsText(event.target.files[0]);
+}
+
+window.onload = function () {
+  populateCategories();
+  filterQuotes();
+};
+
+newQuoteBtn.addEventListener("click", showRandomQuote);
+categoryFilter.addEventListener("change", filterQuotes);
+createAddQuoteForm();
